@@ -6,7 +6,7 @@ const app = express().use(express.json());
 const PORT = 3000;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
-const FB_BASE_URL = "https://graph.facebook.com/v18.0/";
+const FB_BASE_URL = "https://graph.facebook.com/v19.0/";
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 
@@ -170,7 +170,8 @@ function ReceiveNotification(req, res) {
 					console.log("ERROR QueryGPT", error);
 				});
 			}
-		}
+		} else
+			console.log(JSON.stringify(req.body));
 	}
 	res.sendStatus(200);
 }
