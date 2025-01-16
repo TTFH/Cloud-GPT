@@ -6,12 +6,12 @@ const app = express().use(express.json());
 const PORT = 3000;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
-const FB_BASE_URL = "https://graph.facebook.com/v19.0/";
+const FB_BASE_URL = "https://graph.facebook.com/v21.0/";
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 
-const OPENAI_BASE_URL = "https://api.openai.com/v1/chat/";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_BASE_URL = "https://models.inference.ai.azure.com/";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 const db_filename = "./database.json";
 var database = { users: {}, messages: {} };
@@ -32,15 +32,15 @@ function QueryGPT(messages) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const response = await http.post(
-				OPENAI_BASE_URL + "completions",
+				OPENAI_BASE_URL + "chat/completions",
 				{
-					model: "gpt-3.5-turbo-1106",
+					model: "o1",
 					messages
 				},
 				{
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: "Bearer " + OPENAI_API_KEY,
+						Authorization: "Bearer " + GITHUB_TOKEN,
 					},
 				}
 			);
@@ -155,7 +155,7 @@ function ReceiveNotification(req, res) {
 				database.update();
 			} else {
 				QueryGPT(GetHistoricMessages(phone_number)).then(gpt_response => {
-					console.log(gpt_response);
+					console.log("-", gpt_response);
 					sendTextWA(phone_number, gpt_response).then(message_id => {
 						database.messages[message_id] = {
 							to: phone_number,

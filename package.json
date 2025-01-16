@@ -1,0 +1,20 @@
+{
+	"type": "module",
+	"name": "wa-cloud-webhook",
+	"version": "1.0.0",
+	"description": "An example webhook for WhatsApp Cloud.",
+	"main": "app.js",
+	"scripts": {
+		"start": "node app.js"
+	},
+	"author": "TTFH",
+	"license": "CC",
+	"dependencies": {
+		"axios": "latest",
+		"express": "latest",
+		"fs": "latest"
+	},
+	"engines": {
+		"node": ">=14.19.1"
+	}
+}
