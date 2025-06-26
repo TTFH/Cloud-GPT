@@ -6,18 +6,21 @@ const app = express().use(express.json());
 const PORT = 3000;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
-const FB_BASE_URL = "https://graph.facebook.com/v21.0/";
+const FB_BASE_URL = "https://graph.facebook.com/v23.0";
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 
-const OPENAI_BASE_URL = "https://models.inference.ai.azure.com/";
+const OPENAI_BASE_URL = "https://models.inference.ai.azure.com";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 const db_filename = "./database.json";
 var database = { users: {}, messages: {} };
 
 function StartServer() {
-	console.log("Webhook listening incoming messages to", process.env.PHONE_NUMBER);
+	console.log(
+		"Webhook listening to incoming messages to",
+		process.env.PHONE_NUMBER
+	);
 	if (fs.existsSync(db_filename)) {
 		const rawdata = fs.readFileSync(db_filename);
 		database = JSON.parse(rawdata);
@@ -32,15 +35,15 @@ function QueryGPT(messages) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const response = await http.post(
-				OPENAI_BASE_URL + "chat/completions",
+				`${OPENAI_BASE_URL}/chat/completions`,
 				{
-					model: "o1",
-					messages
+					model: "o4-mini",
+					messages,
 				},
 				{
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: "Bearer " + GITHUB_TOKEN,
+						Authorization: `Bearer ${GITHUB_TOKEN}`,
 					},
 				}
 			);
@@ -52,11 +55,11 @@ function QueryGPT(messages) {
 	});
 }
 
-async function sendTextWA(phone_number, text_msg) {
+async function sendTextWpp(phone_number, text_msg) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const response = await http.post(
-				FB_BASE_URL + PHONE_NUMBER_ID + "/messages",
+				`${FB_BASE_URL}/${PHONE_NUMBER_ID}/messages`,
 				{
 					messaging_product: "whatsapp",
 					to: phone_number,
@@ -65,7 +68,7 @@ async function sendTextWA(phone_number, text_msg) {
 				{
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: "Bearer " + WHATSAPP_TOKEN,
+						Authorization: `Bearer ${WHATSAPP_TOKEN}`,
 					},
 				}
 			);
@@ -79,7 +82,7 @@ async function sendTextWA(phone_number, text_msg) {
 
 function MarkAsRead(message_id) {
 	http.post(
-		FB_BASE_URL + PHONE_NUMBER_ID + "/messages",
+		`${FB_BASE_URL}/${PHONE_NUMBER_ID}/messages`,
 		{
 			messaging_product: "whatsapp",
 			status: "read",
@@ -88,7 +91,7 @@ function MarkAsRead(message_id) {
 		{
 			headers: {
 				"Content-Type": "application/json",
-				Authorization: "Bearer " + WHATSAPP_TOKEN,
+				Authorization: `Bearer ${WHATSAPP_TOKEN}`,
 			},
 		}
 	);
@@ -102,16 +105,18 @@ function VerifyEndpoint(req, res) {
 		console.log("Webhook verified!");
 		res.status(200).send(req.query["hub.challenge"]);
 	} else {
-		console.error("Failed validation. Validation tokens do not match.");
+		console.error("Failed validation. Tokens do not match.");
 		res.sendStatus(403);
 	}
 }
 
 function GetHistoricMessages(phone_number) {
-	var messages = [/*{
-		role: "system",
-		content: "Take the role of a WhatsApp Chatbot.",
-	}*/];
+	let messages = [
+		/*{
+			role: "system",
+			content: "Take the role of a WhatsApp Chatbot."
+		}*/
+	];
 	for (const message_id in database.messages) {
 		const msg = database.messages[message_id];
 		if (msg.from === phone_number || msg.to === phone_number) {
@@ -154,24 +159,27 @@ function ReceiveNotification(req, res) {
 				}
 				database.update();
 			} else {
-				QueryGPT(GetHistoricMessages(phone_number)).then(gpt_response => {
-					console.log("-", gpt_response);
-					sendTextWA(phone_number, gpt_response).then(message_id => {
-						database.messages[message_id] = {
-							to: phone_number,
-							caption: gpt_response,
-							timestamp: Math.floor(Date.now() / 1000),
-						};
-						database.update();
-					}).catch(error => {
-						console.log("ERROR sendTextWA", error);
+				QueryGPT(GetHistoricMessages(phone_number))
+					.then(gpt_response => {
+						console.log("-", gpt_response);
+						sendTextWpp(phone_number, gpt_response)
+							.then(message_id => {
+								database.messages[message_id] = {
+									to: phone_number,
+									caption: gpt_response,
+									timestamp: Math.floor(Date.now() / 1000),
+								};
+								database.update();
+							})
+							.catch(error => {
+								console.log("ERROR sendTextWpp", error);
+							});
+					})
+					.catch(error => {
+						console.log("ERROR QueryGPT", error);
 					});
-				}).catch(error => {
-					console.log("ERROR QueryGPT", error);
-				});
 			}
-		} else
-			console.log(JSON.stringify(req.body));
+		} else console.log(JSON.stringify(req.body));
 	}
 	res.sendStatus(200);
 }
