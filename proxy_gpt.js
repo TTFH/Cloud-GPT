@@ -3,7 +3,7 @@ import express from "express";
 import dotenv from "dotenv";
 
 dotenv.config();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const app = express().use(express.json());
 
 const FB_BASE_URL = "https://graph.facebook.com/v23.0";
@@ -15,6 +15,7 @@ const API_KEY = process.env.API_KEY;
 const COMPANY = process.env.COMPANY;
 
 function StartServer() {
+	console.log("Starting server on port", PORT);
 	console.log(
 		"Webhook listening for incoming messages to",
 		process.env.PHONE_NUMBER
@@ -40,7 +41,7 @@ function QueryGPT(message) {
 			const result = response.data.friendlyText || response.data.error;
 			resolve(result);
 		} catch (error) {
-			const message = `Ocurrio un error.\n ${error.response.error}`;
+			const message = `Ocurrio un error.\n${error.response.error}`;
 			resolve(message);
 			//reject(error.message);
 		}
