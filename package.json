@@ -12,6 +12,7 @@
 	"dependencies": {
 		"axios": "latest",
 		"express": "latest",
+		"dotenv": "latest",
 		"fs": "latest"
 	},
 	"engines": {

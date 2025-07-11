@@ -1,6 +1,9 @@
 import fs from "fs";
 import http from "axios";
 import express from "express";
+import dotenv from "dotenv";
+
+dotenv.config();
 const app = express().use(express.json());
 
 const PORT = 3000;
@@ -18,7 +21,7 @@ var database = { users: {}, messages: {} };
 
 function StartServer() {
 	console.log(
-		"Webhook listening to incoming messages to",
+		"Webhook listening for incoming messages to",
 		process.env.PHONE_NUMBER
 	);
 	if (fs.existsSync(db_filename)) {
@@ -47,15 +50,15 @@ function QueryGPT(messages) {
 					},
 				}
 			);
-			const data = response.data.choices[0].message.content;
-			resolve(data);
+			const result = response.data.choices[0].message.content;
+			resolve(result);
 		} catch (error) {
 			reject(error.message);
 		}
 	});
 }
 
-async function sendTextWpp(phone_number, text_msg) {
+async function sendTextReplyWpp(phone_number, reply_id, text_msg) {
 	return new Promise(async (resolve, reject) => {
 		try {
 			const response = await http.post(
@@ -63,6 +66,9 @@ async function sendTextWpp(phone_number, text_msg) {
 				{
 					messaging_product: "whatsapp",
 					to: phone_number,
+					context: {
+						message_id: reply_id,
+					},
 					text: { body: text_msg },
 				},
 				{
@@ -80,21 +86,28 @@ async function sendTextWpp(phone_number, text_msg) {
 	});
 }
 
-function MarkAsRead(message_id) {
-	http.post(
-		`${FB_BASE_URL}/${PHONE_NUMBER_ID}/messages`,
-		{
-			messaging_product: "whatsapp",
-			status: "read",
-			message_id,
-		},
-		{
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-			},
+async function MarkAsRead(message_id) {
+	new Promise(async (resolve, reject) => {
+		try {
+			http.post(
+				`${FB_BASE_URL}/${PHONE_NUMBER_ID}/messages`,
+				{
+					messaging_product: "whatsapp",
+					status: "read",
+					message_id,
+				},
+				{
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+					},
+				}
+			);
+			resolve();
+		} catch (error) {
+			reject(error.message);
 		}
-	);
+	});
 }
 
 function VerifyEndpoint(req, res) {
@@ -149,7 +162,9 @@ function ReceiveNotification(req, res) {
 			database.update();
 
 			console.log(">", msg_body);
-			MarkAsRead(message_id);
+			MarkAsRead(message_id).catch(error => {
+				console.log("ERROR MarkAsRead", error);
+			});
 
 			if (msg_body === "RESET") {
 				for (const message_id in database.messages) {
@@ -162,7 +177,7 @@ function ReceiveNotification(req, res) {
 				QueryGPT(GetHistoricMessages(phone_number))
 					.then(gpt_response => {
 						console.log("-", gpt_response);
-						sendTextWpp(phone_number, gpt_response)
+						sendTextReplyWpp(phone_number, message_id, gpt_response)
 							.then(message_id => {
 								database.messages[message_id] = {
 									to: phone_number,
@@ -172,7 +187,7 @@ function ReceiveNotification(req, res) {
 								database.update();
 							})
 							.catch(error => {
-								console.log("ERROR sendTextWpp", error);
+								console.log("ERROR sendTextReplyWpp", error);
 							});
 					})
 					.catch(error => {
