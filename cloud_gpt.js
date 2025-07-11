@@ -4,9 +4,8 @@ import express from "express";
 import dotenv from "dotenv";
 
 dotenv.config();
-const app = express().use(express.json());
-
 const PORT = 3000;
+const app = express().use(express.json());
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 const FB_BASE_URL = "https://graph.facebook.com/v23.0";
