@@ -170,4 +170,10 @@ function ReceiveNotification(req, res) {
 }
 
 app.listen(PORT, StartServer);
+app.get("/", (req, res) => {
+	res.send("Webhook is running");
+});
+app.post("/ping", (req, res) => {
+	res.send(req.body);
+});
 app.post("/webhook", ReceiveNotification);
