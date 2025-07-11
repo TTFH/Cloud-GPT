@@ -1,11 +1,11 @@
 {
 	"type": "module",
-	"name": "wa-cloud-webhook",
+	"name": "wpp-cloud-webhook",
 	"version": "1.0.0",
 	"description": "An example webhook for WhatsApp Cloud.",
-	"main": "app.js",
+	"main": "proxy_gpt.js",
 	"scripts": {
-		"start": "node app.js"
+		"start": "node proxy_gpt.js"
 	},
 	"author": "TTFH",
 	"license": "CC",
