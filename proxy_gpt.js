@@ -38,10 +38,10 @@ function QueryGPT(message) {
 					},
 				}
 			);
-			const result = response.data.friendlyText || response.data.error;
+			const result = response.data.friendlyText;
 			resolve(result);
 		} catch (error) {
-			const message = `Ocurrio un error.\n${error.response.error}`;
+			const message = error.response.data.error;
 			resolve(message);
 			//reject(error.message);
 		}
